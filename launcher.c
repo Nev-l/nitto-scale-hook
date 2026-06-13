@@ -58,7 +58,7 @@ static void clear_config(void)
 /* ── resource extraction ─────────────────────────────────────────────────── */
 static int extract_dll(char *dll_path_out, DWORD sz)
 {
-    HRSRC   hRes  = FindResourceA(NULL, MAKEINTRESOURCEA(IDR_SCALE_HOOK_DLL), "RCDATA");
+    HRSRC   hRes  = FindResourceA(NULL, MAKEINTRESOURCEA(IDR_SCALE_HOOK_DLL), RT_RCDATA);
     if (!hRes) { fprintf(stderr, "Embedded DLL resource not found\n"); return 0; }
     HGLOBAL hGlob = LoadResource(NULL, hRes);
     if (!hGlob) return 0;
