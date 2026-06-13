@@ -78,6 +78,23 @@ static BOOL dc_is_scaled(HDC hdc, int *cw_out, int *ch_out)
     return g_ow > 0 && (cw > g_ow || ch > g_oh);
 }
 
+/* Scale hSrc (g_ow x g_oh from sx,sy) to fill the full client of hDst.
+   Resets any viewport/window origin Flash may have set so (0,0) is truly
+   the top-left corner of the window, then restores the DC state. */
+static BOOL do_scale_blt(HDC hDst, int cw, int ch,
+                          HDC hSrc, int sx, int sy, DWORD rop)
+{
+    int saved = SaveDC(hDst);
+    SetMapMode(hDst, MM_TEXT);
+    SetViewportOrgEx(hDst, 0, 0, NULL);
+    SetWindowOrgEx(hDst, 0, 0, NULL);
+    SetStretchBltMode(hDst, HALFTONE);
+    SetBrushOrgEx(hDst, 0, 0, NULL);
+    BOOL r = g_StretchBlt(hDst, 0, 0, cw, ch, hSrc, sx, sy, g_ow, g_oh, rop);
+    RestoreDC(hDst, saved);
+    return r;
+}
+
 /* ── hooked BitBlt ─────────────────────────────────────────────────────── */
 static BOOL WINAPI Hook_BitBlt(HDC hDst, int x, int y, int w, int h,
                                 HDC hSrc, int sx, int sy, DWORD rop)
@@ -86,11 +103,8 @@ static BOOL WINAPI Hook_BitBlt(HDC hDst, int x, int y, int w, int h,
         if (g_ow == 0 && w > 64 && h > 64) { g_ow = w; g_oh = h; }
         if (g_ow > 0) {
             int cw, ch;
-            if (dc_is_scaled(hDst, &cw, &ch) && w >= g_ow && h >= g_oh) {
-                SetStretchBltMode(hDst, HALFTONE);
-                SetBrushOrgEx(hDst, 0, 0, NULL);
-                return g_StretchBlt(hDst, 0, 0, cw, ch, hSrc, sx, sy, g_ow, g_oh, rop);
-            }
+            if (dc_is_scaled(hDst, &cw, &ch) && w >= g_ow && h >= g_oh)
+                return do_scale_blt(hDst, cw, ch, hSrc, sx, sy, rop);
         }
     }
     return g_BitBlt(hDst, x, y, w, h, hSrc, sx, sy, rop);
@@ -104,11 +118,8 @@ static BOOL WINAPI Hook_StretchBlt(HDC hDst, int x, int y, int w, int h,
         if (g_ow == 0 && sw > 64 && sh > 64) { g_ow = sw; g_oh = sh; }
         if (g_ow > 0) {
             int cw, ch;
-            if (dc_is_scaled(hDst, &cw, &ch) && sw >= g_ow && sh >= g_oh) {
-                SetStretchBltMode(hDst, HALFTONE);
-                SetBrushOrgEx(hDst, 0, 0, NULL);
-                return g_StretchBlt(hDst, 0, 0, cw, ch, hSrc, sx, sy, g_ow, g_oh, rop);
-            }
+            if (dc_is_scaled(hDst, &cw, &ch) && sw >= g_ow && sh >= g_oh)
+                return do_scale_blt(hDst, cw, ch, hSrc, sx, sy, rop);
         }
     }
     return g_StretchBlt(hDst, x, y, w, h, hSrc, sx, sy, sw, sh, rop);
