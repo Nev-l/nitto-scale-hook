@@ -25,15 +25,20 @@ static WNDPROC           g_orig_proc    = NULL;
 static HMODULE           g_hSelf        = NULL;
 
 /* ── translate mouse lParam: client → stage coords ────────────────────────── */
+/* Flash centres its stage at (off_x, off_y) in the window and maps clicks
+   as stage_x = raw_client_x - off_x.  We must output raw_client_x values
+   that, after Flash subtracts off_x, land on the correct stage position. */
 static LPARAM scale_mouse_lp(LPARAM lp)
 {
     RECT rc; GetClientRect(g_hwnd, &rc);
     int cw = rc.right, ch = rc.bottom;
     if (cw <= 0 || ch <= 0 || g_ow <= 0) return lp;
+    int off_x = (cw - g_ow) / 2;
+    int off_y = (ch - g_oh) / 2;
     int mx = (int)(short)LOWORD(lp);
     int my = (int)(short)HIWORD(lp);
-    mx = MulDiv(mx, g_ow, cw);
-    my = MulDiv(my, g_oh, ch);
+    mx = MulDiv(mx, g_ow, cw) + off_x;
+    my = MulDiv(my, g_oh, ch) + off_y;
     return MAKELPARAM((WORD)mx, (WORD)my);
 }
 
@@ -103,8 +108,14 @@ static BOOL WINAPI Hook_BitBlt(HDC hDst, int x, int y, int w, int h,
         if (g_ow == 0 && w > 64 && h > 64) { g_ow = w; g_oh = h; }
         if (g_ow > 0) {
             int cw, ch;
-            if (dc_is_scaled(hDst, &cw, &ch) && w >= g_ow && h >= g_oh)
-                return do_scale_blt(hDst, cw, ch, hSrc, sx, sy, rop);
+            if (dc_is_scaled(hDst, &cw, &ch) && w >= g_ow && h >= g_oh) {
+                /* Flash adapts its render buffer to the new window size and
+                   centres the original stage within it.  Offset the source
+                   origin to find the game pixels rather than the grey border. */
+                int src_x = sx + (w - g_ow) / 2;
+                int src_y = sy + (h - g_oh) / 2;
+                return do_scale_blt(hDst, cw, ch, hSrc, src_x, src_y, rop);
+            }
         }
     }
     return g_BitBlt(hDst, x, y, w, h, hSrc, sx, sy, rop);
@@ -118,8 +129,11 @@ static BOOL WINAPI Hook_StretchBlt(HDC hDst, int x, int y, int w, int h,
         if (g_ow == 0 && sw > 64 && sh > 64) { g_ow = sw; g_oh = sh; }
         if (g_ow > 0) {
             int cw, ch;
-            if (dc_is_scaled(hDst, &cw, &ch) && sw >= g_ow && sh >= g_oh)
-                return do_scale_blt(hDst, cw, ch, hSrc, sx, sy, rop);
+            if (dc_is_scaled(hDst, &cw, &ch) && sw >= g_ow && sh >= g_oh) {
+                int src_x = sx + (sw - g_ow) / 2;
+                int src_y = sy + (sh - g_oh) / 2;
+                return do_scale_blt(hDst, cw, ch, hSrc, src_x, src_y, rop);
+            }
         }
     }
     return g_StretchBlt(hDst, x, y, w, h, hSrc, sx, sy, sw, sh, rop);
@@ -157,8 +171,10 @@ static BOOL WINAPI Hook_ScreenToClient(HWND hwnd, LPPOINT pt)
         RECT rc; GetClientRect(g_hwnd, &rc);
         int cw = rc.right, ch = rc.bottom;
         if (cw > 0 && ch > 0) {
-            pt->x = MulDiv(pt->x, g_ow, cw);
-            pt->y = MulDiv(pt->y, g_oh, ch);
+            int off_x = (cw - g_ow) / 2;
+            int off_y = (ch - g_oh) / 2;
+            pt->x = MulDiv(pt->x, g_ow, cw) + off_x;
+            pt->y = MulDiv(pt->y, g_oh, ch) + off_y;
         }
     }
     return r;
