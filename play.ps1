@@ -9,7 +9,12 @@ public class NittoWin {
     [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
     [DllImport("user32.dll")] public static extern bool GetClientRect(IntPtr h, out RECT r);
     [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int w, int ht, uint flags);
+    [DllImport("user32.dll")] public static extern IntPtr MonitorFromWindow(IntPtr h, uint flags);
+    [DllImport("user32.dll")] public static extern bool GetMonitorInfo(IntPtr hMon, ref MONITORINFO mi);
     [StructLayout(LayoutKind.Sequential)] public struct RECT { public int L, T, R, B; }
+    [StructLayout(LayoutKind.Sequential)] public struct MONITORINFO {
+        public int cbSize, L, T, R, B, wL, wT, wR, wB, flags;
+    }
 }
 "@
 
@@ -112,9 +117,22 @@ $newCH = [int]($origCH * $scale)
 $newW  = $newCW + $borderW
 $newH  = $newCH + $borderH
 
-$SWP_NOMOVE   = 0x0002
+# Centre window on its current monitor so the full client fits on screen
+$MONITOR_DEFAULTTONEAREST = 2
+$mi = New-Object NittoWin+MONITORINFO
+$mi.cbSize = [System.Runtime.InteropServices.Marshal]::SizeOf($mi)
+$hMon = [NittoWin]::MonitorFromWindow($hwnd, $MONITOR_DEFAULTTONEAREST)
+[NittoWin]::GetMonitorInfo($hMon, [ref]$mi) | Out-Null
+$workW = $mi.wR - $mi.wL
+$workH = $mi.wB - $mi.wT
+$posX  = $mi.wL + [int](($workW - $newW) / 2)
+$posY  = $mi.wT + [int](($workH - $newH) / 2)
+# Clamp so window never starts above or left of the work area
+if ($posX -lt $mi.wL) { $posX = $mi.wL }
+if ($posY -lt $mi.wT) { $posY = $mi.wT }
+
 $SWP_NOZORDER = 0x0004
-[NittoWin]::SetWindowPos($hwnd, [IntPtr]::Zero, 0, 0, $newW, $newH, $SWP_NOMOVE -bor $SWP_NOZORDER) | Out-Null
+[NittoWin]::SetWindowPos($hwnd, [IntPtr]::Zero, $posX, $posY, $newW, $newH, $SWP_NOZORDER) | Out-Null
 
 Write-Host ""
 Write-Host "Scaled to ${scale}x  (client: ${newCW} x ${newCH})"
