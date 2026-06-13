@@ -19,7 +19,21 @@ static HWND              g_hwnd         = NULL;
 static int               g_ow = 0, g_oh = 0;
 static WNDPROC           g_orig_proc    = NULL;
 
-/* ── translate mouse lParam from stretched coords to original stage coords ── */
+/* ── compute letterboxed destination rect (aspect-ratio preserved, centered) */
+static void letterbox_rect(int cw, int ch, int *ox, int *oy, int *ow, int *oh)
+{
+    /* Fit g_ow x g_oh inside cw x ch, preserving aspect ratio. */
+    int sw = MulDiv(ch, g_ow, g_oh);   /* width if we fit to height */
+    if (sw <= cw) {
+        *ow = sw; *oh = ch;
+    } else {
+        *ow = cw; *oh = MulDiv(cw, g_oh, g_ow);
+    }
+    *ox = (cw - *ow) / 2;
+    *oy = (ch - *oh) / 2;
+}
+
+/* ── translate mouse coords: stretched/letterboxed client → stage space ───── */
 static LPARAM scale_mouse_lp(LPARAM lp)
 {
     RECT rc; GetClientRect(g_hwnd, &rc);
@@ -27,8 +41,11 @@ static LPARAM scale_mouse_lp(LPARAM lp)
     if (cw <= 0 || ch <= 0 || g_ow <= 0) return lp;
     int mx = (int)(short)LOWORD(lp);
     int my = (int)(short)HIWORD(lp);
-    mx = MulDiv(mx, g_ow, cw);
-    my = MulDiv(my, g_oh, ch);
+    int ox, oy, ow, oh;
+    letterbox_rect(cw, ch, &ox, &oy, &ow, &oh);
+    /* Clamp to the game rect, then map to stage coords. */
+    mx = MulDiv(mx - ox, g_ow, ow);
+    my = MulDiv(my - oy, g_oh, oh);
     return MAKELPARAM((WORD)mx, (WORD)my);
 }
 
@@ -69,9 +86,14 @@ static BOOL WINAPI Hook_BitBlt(HDC hDst, int x, int y, int w, int h,
                (g_ow x g_oh) with grey border filling the rest.  Scale just
                the movie-clip region to fill the whole client area. */
             if ((cw > g_ow || ch > g_oh) && w >= g_ow && h >= g_oh) {
+                int ox, oy, ow, oh;
+                letterbox_rect(cw, ch, &ox, &oy, &ow, &oh);
+                /* Black out letterbox bars before drawing. */
+                RECT full = {0, 0, cw, ch};
+                FillRect(hDst, &full, (HBRUSH)GetStockObject(BLACK_BRUSH));
                 SetStretchBltMode(hDst, HALFTONE);
                 SetBrushOrgEx(hDst, 0, 0, NULL);
-                return g_StretchBlt(hDst, 0, 0, cw, ch, hSrc, sx, sy, g_ow, g_oh, rop);
+                return g_StretchBlt(hDst, ox, oy, ow, oh, hSrc, sx, sy, g_ow, g_oh, rop);
             }
         }
     }
@@ -88,9 +110,13 @@ static BOOL WINAPI Hook_StretchBlt(HDC hDst, int x, int y, int w, int h,
             RECT rc; GetClientRect(g_hwnd, &rc);
             int cw = rc.right, ch = rc.bottom;
             if ((cw > g_ow || ch > g_oh) && sw >= g_ow && sh >= g_oh) {
+                int ox, oy, ow, oh;
+                letterbox_rect(cw, ch, &ox, &oy, &ow, &oh);
+                RECT full = {0, 0, cw, ch};
+                FillRect(hDst, &full, (HBRUSH)GetStockObject(BLACK_BRUSH));
                 SetStretchBltMode(hDst, HALFTONE);
                 SetBrushOrgEx(hDst, 0, 0, NULL);
-                return g_StretchBlt(hDst, 0, 0, cw, ch, hSrc, sx, sy, g_ow, g_oh, rop);
+                return g_StretchBlt(hDst, ox, oy, ow, oh, hSrc, sx, sy, g_ow, g_oh, rop);
             }
         }
     }
@@ -120,20 +146,19 @@ static BOOL WINAPI Hook_MoveWindow(HWND hwnd, int x, int y,
     return g_MoveWindow(hwnd, x, y, w, h, repaint);
 }
 
-/* ── coordinate scaling helper ─────────────────────────────────────────── */
-static void scale_pt_to_stage(POINT *pt)
-{
-    RECT rc; GetClientRect(g_hwnd, &rc);
-    int cw = rc.right, ch = rc.bottom;
-    if (cw > g_ow && g_ow > 0) pt->x = MulDiv(pt->x, g_ow, cw);
-    if (ch > g_oh && g_oh > 0) pt->y = MulDiv(pt->y, g_oh, ch);
-}
 
 /* ── hooked ScreenToClient ──────────────────────────────────────────────── */
 static BOOL WINAPI Hook_ScreenToClient(HWND hwnd, LPPOINT pt)
 {
     BOOL r = g_ScreenToClient(hwnd, pt);
-    if (r && hwnd == g_hwnd) scale_pt_to_stage(pt);
+    if (r && hwnd == g_hwnd && g_ow > 0) {
+        RECT rc; GetClientRect(g_hwnd, &rc);
+        int cw = rc.right, ch = rc.bottom;
+        int ox, oy, ow, oh;
+        letterbox_rect(cw, ch, &ox, &oy, &ow, &oh);
+        pt->x = MulDiv(pt->x - ox, g_ow, ow);
+        pt->y = MulDiv(pt->y - oy, g_oh, oh);
+    }
     return r;
 }
 
