@@ -1,0 +1,28 @@
+/* Dialog style flags needed by rc.exe (not in scope without windows.h) */
+#define DS_SETFONT      0x0040L
+#define DS_MODALFRAME   0x0080L
+#define DS_CENTER       0x0800L
+#define WS_POPUP        0x80000000L
+#define WS_CAPTION      0x00C00000L
+#define WS_SYSMENU      0x00080000L
+#define WS_GROUP        0x00020000L
+#define WS_TABSTOP      0x00010000L
+#define WS_BORDER       0x00800000L
+#define ES_AUTOHSCROLL  0x0080L
+#define ES_READONLY     0x0800L
+#define SS_WORDELLIPSIS 0x000C0000L
+#define BS_AUTORADIOBUTTON 0x00000009L
+#define BS_DEFPUSHBUTTON   0x00000001L
+
+#define IDR_SCALE_HOOK_DLL  101
+#define IDD_MAIN            102
+#define IDC_GAME_PATH       1001
+#define IDC_BROWSE          1002
+#define IDC_RADIO_125       1003
+#define IDC_RADIO_150       1004
+#define IDC_RADIO_175       1005
+#define IDC_RADIO_200       1006
+#define IDC_RADIO_CUSTOM    1007
+#define IDC_CUSTOM_SCALE    1008
+#define IDC_LAUNCH          1009
+#define IDC_STATUS          1010

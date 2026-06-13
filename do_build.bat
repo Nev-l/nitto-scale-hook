@@ -13,7 +13,7 @@ if %ERRORLEVEL% neq 0 ( echo inject.exe FAILED & exit /b 1 )
 echo Building nitto-launcher.exe...
 rc /nologo launcher.rc
 if %ERRORLEVEL% neq 0 ( echo rc FAILED & exit /b 1 )
-cl /nologo /O2 /W3 /Fe:nitto-launcher.exe launcher.c launcher.res /link user32.lib kernel32.lib /MACHINE:X86
+cl /nologo /O2 /W3 /Fe:nitto-launcher.exe launcher.c launcher.res /link user32.lib kernel32.lib comdlg32.lib /SUBSYSTEM:WINDOWS /MACHINE:X86
 if %ERRORLEVEL% neq 0 ( echo nitto-launcher.exe FAILED & exit /b 1 )
 
 echo.
