@@ -1,0 +1,15 @@
+*.obj
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.exe
+*.dll
+build_out.txt
+config.txt
+prefs.txt
+nitto-scale-hook/
+nitto-scale-hook.zip
+.claude/
+NittoLegendsBeta.exe
+inject.py
