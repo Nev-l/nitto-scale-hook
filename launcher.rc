@@ -1,0 +1,2 @@
+#define IDR_SCALE_HOOK_DLL 101
+IDR_SCALE_HOOK_DLL RCDATA "scale_hook.dll"
