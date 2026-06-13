@@ -14,6 +14,7 @@
 #define BS_AUTORADIOBUTTON 0x00000009L
 #define BS_DEFPUSHBUTTON   0x00000001L
 
+#define IDI_APP             1
 #define IDR_SCALE_HOOK_DLL  101
 #define IDD_MAIN            102
 #define IDC_GAME_PATH       1001

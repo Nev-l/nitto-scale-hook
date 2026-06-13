@@ -1,25 +1,32 @@
 #include "resource.h"
 
+/* Embedded scale hook DLL */
 IDR_SCALE_HOOK_DLL RCDATA "scale_hook.dll"
 
-IDD_MAIN DIALOGEX 0, 0, 300, 132
+/* Application icon (index 0 from NittoLegendsBeta.exe) */
+IDI_APP ICON "nitto.ico"
+
+/* Visual styles manifest — enables ComCtl32 v6 theming */
+1 24 "launcher.manifest"
+
+IDD_MAIN DIALOGEX 0, 0, 292, 108
 STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Nitto Legends Scale Hook"
 FONT 9, "Segoe UI", 400, 0, 0x1
 BEGIN
-    LTEXT           "Game:", -1, 8, 12, 24, 9
-    EDITTEXT        IDC_GAME_PATH, 34, 10, 224, 13, ES_AUTOHSCROLL | ES_READONLY
-    PUSHBUTTON      "Browse...", IDC_BROWSE, 262, 9, 34, 15
+    LTEXT           "Game:", -1, 8, 12, 22, 9
+    EDITTEXT        IDC_GAME_PATH, 32, 10, 222, 13, ES_AUTOHSCROLL | ES_READONLY
+    PUSHBUTTON      "Browse...", IDC_BROWSE, 258, 9, 30, 15
 
-    GROUPBOX        "Scale", -1, 8, 28, 286, 56, WS_GROUP
-    AUTORADIOBUTTON "1.25x",   IDC_RADIO_125,    18, 40, 50, 12, WS_GROUP | WS_TABSTOP
-    AUTORADIOBUTTON "1.50x",   IDC_RADIO_150,    76, 40, 50, 12
-    AUTORADIOBUTTON "1.75x",   IDC_RADIO_175,   134, 40, 50, 12
-    AUTORADIOBUTTON "2.00x",   IDC_RADIO_200,   192, 40, 50, 12
-    AUTORADIOBUTTON "Custom:", IDC_RADIO_CUSTOM,  18, 56, 50, 12
-    EDITTEXT        IDC_CUSTOM_SCALE, 70, 54, 36, 14, ES_AUTOHSCROLL
+    GROUPBOX        "Scale", -1, 8, 28, 276, 28
+    AUTORADIOBUTTON "1.25x",   IDC_RADIO_125,     16, 39, 42, 12, WS_GROUP | WS_TABSTOP
+    AUTORADIOBUTTON "1.50x",   IDC_RADIO_150,     60, 39, 42, 12
+    AUTORADIOBUTTON "1.75x",   IDC_RADIO_175,    104, 39, 42, 12
+    AUTORADIOBUTTON "2.00x",   IDC_RADIO_200,    148, 39, 42, 12
+    AUTORADIOBUTTON "Custom:", IDC_RADIO_CUSTOM, 192, 39, 46, 12
+    EDITTEXT        IDC_CUSTOM_SCALE, 240, 37, 38, 14, ES_AUTOHSCROLL
 
-    DEFPUSHBUTTON   "Launch && Scale", IDC_LAUNCH, 95, 92, 110, 18
+    DEFPUSHBUTTON   "Launch && Scale", IDC_LAUNCH, 91, 65, 110, 18
 
-    LTEXT           "", IDC_STATUS, 8, 118, 286, 10, SS_WORDELLIPSIS
+    LTEXT           "", IDC_STATUS, 8, 90, 276, 12, SS_WORDELLIPSIS
 END

@@ -1,5 +1,6 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <commctrl.h>
 #include <commdlg.h>
 #include <tlhelp32.h>
 #include <stdarg.h>
@@ -11,9 +12,10 @@
 #define WM_SET_STATUS  (WM_APP + 1)   /* lParam = heap-alloc'd char*, caller posts, dlg frees */
 #define WM_LAUNCH_DONE (WM_APP + 2)   /* wParam = 1 success, 0 fail */
 
-static HWND g_dlg      = NULL;
-static char g_dll_path[MAX_PATH];
-static char g_game_exe[MAX_PATH];
+static HWND      g_dlg      = NULL;
+static HINSTANCE g_hInst    = NULL;
+static char      g_dll_path[MAX_PATH];
+static char      g_game_exe[MAX_PATH];
 
 /* ── status line (thread-safe) ───────────────────────────────────────────── */
 static void set_status(const char *fmt, ...)
@@ -171,8 +173,12 @@ static void sync_custom(HWND dlg)
 static INT_PTR CALLBACK DlgProc(HWND dlg, UINT msg, WPARAM wp, LPARAM lp)
 {
     switch (msg) {
-    case WM_INITDIALOG:
+    case WM_INITDIALOG: {
         g_dlg = dlg;
+        /* Set window icon from embedded resource */
+        HICON hIcon = LoadIconA(g_hInst, MAKEINTRESOURCEA(IDI_APP));
+        SendMessage(dlg, WM_SETICON, ICON_BIG,   (LPARAM)hIcon);
+        SendMessage(dlg, WM_SETICON, ICON_SMALL,  (LPARAM)hIcon);
         CheckDlgButton(dlg, IDC_RADIO_150, BST_CHECKED);
         SetDlgItemTextA(dlg, IDC_CUSTOM_SCALE, "1.5");
         EnableWindow(GetDlgItem(dlg, IDC_CUSTOM_SCALE), FALSE);
@@ -181,6 +187,7 @@ static INT_PTR CALLBACK DlgProc(HWND dlg, UINT msg, WPARAM wp, LPARAM lp)
         else
             SetDlgItemTextA(dlg, IDC_STATUS, "Browse to NittoLegendsBeta.exe to get started.");
         return TRUE;
+    }
 
     case WM_COMMAND:
         switch (LOWORD(wp)) {
@@ -264,6 +271,11 @@ static INT_PTR CALLBACK DlgProc(HWND dlg, UINT msg, WPARAM wp, LPARAM lp)
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR lpCmd, int nShow)
 {
     (void)hPrev; (void)lpCmd; (void)nShow;
+    g_hInst = hInst;
+
+    INITCOMMONCONTROLSEX icc = { sizeof(icc), ICC_STANDARD_CLASSES };
+    InitCommonControlsEx(&icc);
+
     if (!extract_dll()) {
         MessageBoxA(NULL, "Failed to extract embedded scale_hook.dll.", "Error", MB_ICONERROR);
         return 1;

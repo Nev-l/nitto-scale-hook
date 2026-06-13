@@ -1,36 +1,46 @@
 # Nitto Legends Scale Hook
 
-Lets you resize the Nitto Legends game window to **1.25×, 1.5×, 1.75×, 2×, or any custom scale** while keeping full mouse accuracy. Works by intercepting the game's GDI rendering calls and scaling them to fill the window.
+Scale the Nitto Legends game window to **1.25×, 1.5×, 1.75×, 2×, or any custom size** while keeping full mouse accuracy and edge-to-edge content — no grey bars, no offset clicks.
 
-## Download & Run (no build required)
+---
 
-1. Go to the [Releases](../../releases) page and download the latest `nitto-scale-hook.zip`
-2. Extract anywhere
+## Download
 
-**Option A — single exe (easiest):**
-Double-click **`nitto-launcher.exe`** — it embeds the hook DLL and handles everything.
+Go to **[Releases](../../releases)** and download `nitto-scale-hook.zip`.  
+Extract it anywhere. No install required.
 
-**Option B — PowerShell launcher:**
-Double-click **`play.bat`** — same flow, requires PowerShell 5+.
+---
 
-On first run either launcher will ask for the path to your `NittoLegendsBeta.exe` and remember it. Pick a scale — done.
+## Usage
 
-No Python, no Visual Studio, no admin rights required.
+**Double-click `nitto-launcher.exe`**
+
+On first run, click **Browse…** and point it at your `NittoLegendsBeta.exe`. The path is remembered for next time. Pick a scale and click **Launch & Scale** — that's it.
+
+> `play.bat` / `play.ps1` are included as a PowerShell alternative if you prefer that workflow.
+
+---
 
 ## How it works
 
-The hook DLL is injected into the game process at startup. It patches the game's import table to intercept three groups of Windows API calls:
+The launcher injects `scale_hook.dll` into the running game process. The DLL patches the game's import table to intercept Windows API calls:
 
-- **`BitBlt` / `StretchBlt`** — the game renders its Flash stage at a fixed resolution; the hook scales that framebuffer to fill the current window size using `HALFTONE` quality
-- **`SetWindowPos` / `MoveWindow`** — prevents the Flash runtime from snapping the window back to the original size after every frame
-- **`ScreenToClient`** — translates cursor coordinates from stretched window space back to the original stage space so all clicks land correctly
-- **`PatBlt` / `FillRect`** — suppresses the Flash runtime's grey border fills so the scaled content reaches every edge
+| Hooked API | What it does |
+|---|---|
+| `BitBlt` / `StretchBlt` | Scales the Flash framebuffer edge-to-edge using `HALFTONE` quality |
+| `SetWindowPos` / `MoveWindow` | Prevents Flash from snapping the window back to its original size |
+| `ScreenToClient` | Maps cursor positions from scaled window space back to stage space |
+| `PatBlt` / `FillRect` | Suppresses the grey border Flash paints around the stage |
 
-`nitto-launcher.exe` has `scale_hook.dll` embedded as a Windows resource. On launch it extracts it to `%TEMP%\nsh\` before injection, so no extra files need to be in the same folder.
+Flash adapts its render buffer to the new window size and centres the original 800×600 stage within it. The hook samples from that centre region and stretches it to fill the full window, then applies the inverse offset to all mouse coordinates so every click lands exactly where it should.
+
+`nitto-launcher.exe` has `scale_hook.dll` embedded as a Windows resource. On launch it extracts it to `%TEMP%\nsh\` automatically — no loose files needed.
+
+---
 
 ## Build from source
 
-Requires [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022) with the **MSVC v143 x86 toolset**.
+Requires [Visual Studio Build Tools 2022](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022) with the **MSVC v143 x86 toolset** and **Windows 10 SDK**.
 
 ```
 do_build.bat
@@ -38,17 +48,23 @@ do_build.bat
 
 Produces `scale_hook.dll`, `inject.exe`, and `nitto-launcher.exe`.
 
+---
+
 ## Files
 
 | File | Purpose |
 |---|---|
-| `scale_hook.c` | Hook DLL source — GDI / window / cursor hooks |
-| `inject.c` | Injector source — loads the DLL into the game process |
-| `launcher.c` | Standalone launcher source — embeds DLL, no extra files needed |
-| `launcher.rc` | Resource script — embeds scale_hook.dll into the launcher |
-| `play.ps1` | PowerShell launcher — starts game, injects, resizes |
-| `play.bat` | Entry point for play.ps1 — double-click to run |
-| `do_build.bat` | Build script for developers |
+| `nitto-launcher.exe` | **Start here.** GUI launcher — embeds the DLL, no extra files needed |
+| `scale_hook.c` | Hook DLL — GDI / window / cursor intercepts |
+| `inject.c` | Injector — loads the DLL into the game via `CreateRemoteThread` |
+| `launcher.c` | GUI launcher source |
+| `launcher.rc` | Resource script — embeds DLL + icon + manifest |
+| `resource.h` | Shared resource IDs |
+| `play.ps1` | PowerShell launcher (alternative to the exe) |
+| `play.bat` | Double-click entry point for `play.ps1` |
+| `do_build.bat` | Build script |
+
+---
 
 ## License
 
